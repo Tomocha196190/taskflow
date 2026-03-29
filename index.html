@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0E0F14" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="TaskFlow" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>TaskFlow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- ★ Firebase SDK -->
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, onValue, set, push, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    // ============================================================
+    // ★★★ ここにFirebaseの設定を貼り付けてください ★★★
+    // Firebaseコンソール → プロジェクト設定 → マイアプリ → Firebase SDK snippet
+    // ============================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyBYBZNN6j8y_9c67IgCYSPrV7Kio_WzI1Q",
+      authDomain: "todolist-31ad2.firebaseapp.com",
+      databaseURL: "https://todolist-31ad2-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "todolist-31ad2",
+      storageBucket: "todolist-31ad2.firebasestorage.app",
+      messagingSenderId: "740714981963",
+      appId: "1:740714981963:web:d90ecfdc114d5c691f3bce"
+    };
+    // ============================================================
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    window._db = db;
+    window._dbRef = ref;
+    window._dbSet = set;
+    window._dbPush = push;
+    window._dbUpdate = update;
+    window._dbRemove = remove;
+    window._dbOnValue = onValue;
+    window._firebaseReady = true;
+    window.dispatchEvent(new Event("firebase-ready"));
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; background: #0E0F14; overflow: hidden; }
+    body { font-family: 'Noto Sans JP', sans-serif; color: #E0E0E0; }
+    :root {
+      --bg: #0E0F14;
+      --surface: #13141C;
+      --surface2: #1A1B26;
+      --border: #1e1f2a;
+      --border2: #2a2b38;
+      --text: #E0E0E0;
+      --text2: #888;
+      --text3: #555;
+      --accent: #4F8EF7;
+      --accent2: #7B4FF7;
+      --green: #4FC97F;
+      --red: #FF4F4F;
+      --yellow: #F7C44F;
+    }
+    ::-webkit-scrollbar { display: none; }
+    input, textarea, select, button { font-family: inherit; outline: none; }
+    button { cursor: pointer; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
+    }
+    @keyframes slideIn {
+      from { transform: translateX(30px); opacity: 0; }
+      to   { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    /* ── LAYOUT ── */
+    #app { display: flex; flex-direction: column; height: 100vh; max-width: 430px; margin: 0 auto; position: relative; }
+
+    /* ── HEADER ── */
+    .header {
+      padding: env(safe-area-inset-top, 44px) 20px 14px;
+      background: linear-gradient(180deg, #13141C 0%, var(--bg) 100%);
+      border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: flex-end;
+      flex-shrink: 0;
+    }
+    .header-sub { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 3px; }
+    .header-title { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+    .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); margin-left: 8px; display: inline-block; animation: pulse 2s infinite; }
+    .sync-dot.offline { background: var(--text3); animation: none; }
+    .add-btn {
+      width: 42px; height: 42px; border-radius: 50%; border: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; font-size: 22px; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 14px #4F8EF744;
+    }
+
+    /* ── TABS ── */
+    .nav-tabs { display: flex; padding: 8px 16px 0; gap: 6px; flex-shrink: 0; border-bottom: 1px solid var(--border); }
+    .nav-tab { flex: 1; padding: 8px 0; border: none; background: transparent; color: var(--text3); font-size: 13px; border-bottom: 2px solid transparent; transition: all .2s; }
+    .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── SCROLL AREA ── */
+    .scroll-area { flex: 1; overflow-y: auto; padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 16px); }
+
+    /* ── FILTER BAR ── */
+    .filter-row { padding: 12px 0 0 16px; }
+    .filter-scroll { display: flex; gap: 8px; overflow-x: auto; padding-right: 16px; padding-bottom: 4px; }
+    .cat-chip {
+      flex-shrink: 0; padding: 5px 12px; border: 1px solid var(--border2);
+      background: transparent; border-radius: 20px; font-size: 12px; color: var(--text2); transition: all .2s;
+    }
+    .cat-chip.active { background: #4F8EF722; border-color: var(--accent); color: var(--accent); }
+    .sub-filters { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px 6px; }
+    .status-row { display: flex; gap: 4px; }
+    .status-btn { padding: 4px 10px; border: 1px solid var(--border2); background: transparent; border-radius: 12px; font-size: 11px; color: var(--text3); transition: all .2s; }
+    .status-btn.active { background: #ffffff11; border-color: #555; color: var(--text); }
+    .sort-select { background: var(--surface2); border: 1px solid var(--border2); color: var(--text2); border-radius: 8px; padding: 4px 8px; font-size: 11px; }
+
+    /* ── TASK CARD ── */
+    .task-list { padding: 4px 16px; display: flex; flex-direction: column; gap: 10px; }
+    .task-card {
+      background: var(--surface); border-radius: 14px; padding: 14px 14px 12px;
+      border: 1px solid var(--border); border-left-width: 3px;
+      animation: fadeUp .25s ease both; cursor: pointer; position: relative;
+    }
+    .task-card.done { opacity: 0.5; }
+    .task-top { display: flex; align-items: center; gap: 10px; }
+    .checkbox { background: none; border: none; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .task-info { flex: 1; min-width: 0; }
+    .task-title { font-size: 14px; font-weight: 500; line-height: 1.4; margin-bottom: 4px; }
+    .task-title.done { text-decoration: line-through; }
+    .task-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .pri-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .due-badge { padding: 2px 7px; border-radius: 10px; font-family: 'DM Mono', monospace; font-size: 11px; }
+    .chevron { color: #333; font-size: 20px; }
+    .task-progress { margin-top: 10px; }
+    .progress-bar { height: 4px; background: var(--border2); border-radius: 4px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 4px; transition: width .5s ease; }
+    .dur-text { font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; margin-top: 4px; }
+    .empty { text-align: center; padding: 60px 0; }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-text { color: var(--text3); font-size: 14px; }
+
+    /* ── CALENDAR ── */
+    .cal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 12px; }
+    .cal-nav { background: none; border: none; color: var(--accent); font-size: 24px; }
+    .cal-title { font-size: 16px; font-weight: 700; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; padding: 0 12px 12px; }
+    .cal-dow { text-align: center; font-size: 11px; padding: 4px 0; font-family: 'DM Mono', monospace; }
+    .cal-cell { min-height: 46px; padding: 4px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .cal-cell.today { background: #4F8EF722; border: 1px solid #4F8EF755; }
+    .cal-day { font-size: 12px; }
+    .cal-dot { width: 6px; height: 6px; border-radius: 50%; cursor: pointer; }
+    .cal-task-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+    .section-label { font-size: 11px; color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; font-family: 'DM Mono', monospace; }
+
+    /* ── DETAIL ── */
+    .back-btn { margin: 14px 16px 0; background: none; border: none; color: var(--accent); font-size: 14px; padding: 0; }
+    .detail-card { margin: 10px 16px; background: var(--surface); border-radius: 18px; padding: 20px; border: 1px solid var(--border); animation: slideIn .25s ease; }
+    .badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; }
+    .detail-title { font-size: 20px; font-weight: 700; line-height: 1.4; margin: 12px 0 8px; }
+    .detail-notes { font-size: 13px; color: var(--text2); line-height: 1.6; }
+    .divider { height: 1px; background: var(--border); margin: 16px 0; }
+    .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; }
+    .detail-label { font-size: 12px; color: var(--text3); }
+    .detail-val { font-size: 13px; font-family: 'DM Mono', monospace; }
+    .action-btn { padding: 10px 14px; border-radius: 12px; border: none; font-size: 13px; }
+
+    /* ── FORM SHEET ── */
+    .overlay { position: fixed; inset: 0; background: #000000bb; z-index: 200; display: flex; align-items: flex-end; }
+    .form-sheet {
+      background: var(--surface); border-radius: 22px 22px 0 0;
+      padding: 12px 20px calc(env(safe-area-inset-bottom, 16px) + 24px);
+      width: 100%; max-height: 90vh; overflow-y: auto;
+      border: 1px solid var(--border2); animation: slideUp .3s cubic-bezier(.22,1,.36,1);
+    }
+    .form-handle { width: 36px; height: 4px; background: #333; border-radius: 4px; margin: 0 auto 16px; }
+    .form-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+    .form-label { font-size: 11px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; margin: 14px 0 6px; }
+    .form-input {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 12px; padding: 12px 14px; color: var(--text); font-size: 14px;
+    }
+    .form-input:focus { border-color: var(--accent); }
+    .form-textarea { height: 70px; resize: none; }
+    .date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .cat-options { display: flex; gap: 8px; flex-wrap: wrap; }
+    .cat-option { padding: 6px 12px; border-radius: 12px; border: 1px solid var(--border2); background: transparent; font-size: 12px; display: flex; align-items: center; gap: 4px; transition: all .2s; }
+    .pri-options { display: flex; gap: 8px; }
+    .pri-option { flex: 1; padding: 8px 0; border-radius: 12px; border: 1px solid var(--border2); background: transparent; font-size: 13px; transition: all .2s; }
+    .btn-row { display: flex; gap: 10px; margin-top: 12px; }
+    .btn-cancel { flex: 1; padding: 14px 0; border-radius: 14px; border: none; background: #ffffff11; color: var(--text2); font-size: 15px; }
+    .btn-save { flex: 2; padding: 14px 0; border-radius: 14px; border: none; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; font-size: 15px; font-weight: 700; }
+    .btn-save:disabled { opacity: 0.4; }
+
+    /* ── LOADING ── */
+    .loading { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 200px; gap: 16px; }
+    .spinner { width: 32px; height: 32px; border: 3px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+    .loading-text { font-size: 13px; color: var(--text3); }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed; bottom: calc(env(safe-area-inset-bottom, 16px) + 16px); left: 50%; transform: translateX(-50%);
+      background: var(--surface2); border: 1px solid var(--border2); border-radius: 20px;
+      padding: 8px 18px; font-size: 13px; color: var(--text); z-index: 300;
+      animation: fadeUp .3s ease; pointer-events: none;
+    }
+  </style>
+
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div>
+      <div class="header-sub">TaskFlow <span class="sync-dot offline" id="syncDot"></span></div>
+      <div class="header-title" id="headerTitle">タスク一覧</div>
+    </div>
+    <button class="add-btn" onclick="openForm()">＋</button>
+  </div>
+
+  <div class="nav-tabs">
+    <button class="nav-tab active" id="tab-list" onclick="switchView('list')">📋 リスト</button>
+    <button class="nav-tab" id="tab-calendar" onclick="switchView('calendar')">📅 カレンダー</button>
+  </div>
+
+  <div class="scroll-area" id="scrollArea">
+    <div id="listView"></div>
+    <div id="calendarView" style="display:none"></div>
+    <div id="detailView" style="display:none"></div>
+  </div>
+</div>
+
+<!-- FORM OVERLAY -->
+
+<div class="overlay" id="formOverlay" style="display:none" onclick="closeForm(event)">
+  <div class="form-sheet" onclick="event.stopPropagation()">
+    <div class="form-handle"></div>
+    <div class="form-title" id="formTitle">タスクを追加</div>
+    <input class="form-input" id="fTitle" placeholder="タスク名 *" oninput="checkFormValid()" />
+
+```
+<div class="form-label">カテゴリ</div>
+<div class="cat-options" id="catOptions"></div>
+
+<div class="form-label">優先度</div>
+<div class="pri-options" id="priOptions"></div>
+
+<div class="form-label">日付</div>
+<div class="date-row">
+  <div>
+    <div style="font-size:11px;color:#666;margin-bottom:4px;">開始日</div>
+    <input type="date" class="form-input" id="fStart" />
+  </div>
+  <div>
+    <div style="font-size:11px;color:#666;margin-bottom:4px;">期限 *</div>
+    <input type="date" class="form-input" id="fDue" oninput="checkFormValid()" />
+  </div>
+</div>
+
+<div class="form-label">メモ</div>
+<textarea class="form-input form-textarea" id="fNotes" placeholder="メモ（任意）"></textarea>
+
+<div class="btn-row">
+  <button class="btn-cancel" onclick="closeFormDirect()">キャンセル</button>
+  <button class="btn-save" id="saveBtn" onclick="saveTask()" disabled>追加する</button>
+</div>
+```
+
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const CATEGORIES = [
+  { id: "work",     label: "仕事",   color: "#4F8EF7", icon: "💼" },
+  { id: "personal", label: "個人",   color: "#F7724F", icon: "🌿" },
+  { id: "health",   label: "健康",   color: "#4FC97F", icon: "💪" },
+  { id: "study",    label: "学習",   color: "#B44FF7", icon: "📚" },
+  { id: "other",    label: "その他", color: "#F7C44F", icon: "✦"  },
+];
+const PRIORITIES = [
+  { id: "high",   label: "高", color: "#FF4F4F" },
+  { id: "medium", label: "中", color: "#F7C44F" },
+  { id: "low",    label: "低", color: "#4FC97F" },
+];
+
+let tasks = [];
+let view = "list";
+let filterCat = "all";
+let filterStatus = "active";
+let sortBy = "due";
+let selectedTaskId = null;
+let editingId = null;
+let formCat = "work";
+let formPri = "medium";
+let calYear, calMonth;
+let firebaseReady = false;
+
+const today = new Date();
+const todayStr = today.toISOString().slice(0, 10);
+calYear = today.getFullYear();
+calMonth = today.getMonth();
+
+// ============================================================
+// FIREBASE
+// ============================================================
+function waitForFirebase() {
+  return new Promise(resolve => {
+    if (window._firebaseReady) { resolve(); return; }
+    window.addEventListener("firebase-ready", resolve, { once: true });
+  });
+}
+
+async function initFirebase() {
+  await waitForFirebase();
+  firebaseReady = true;
+  document.getElementById("syncDot").classList.remove("offline");
+  const tasksRef = window._dbRef(window._db, "tasks");
+  window._dbOnValue(tasksRef, snapshot => {
+    const data = snapshot.val();
+    tasks = data ? Object.entries(data).map(([id, v]) => ({ id, ...v })) : [];
+    renderCurrent();
+  });
+}
+
+async function pushTask(task) {
+  if (!firebaseReady) return;
+  const { id, ...data } = task;
+  await window._dbPush(window._dbRef(window._db, "tasks"), data);
+}
+
+async function updateTask(id, data) {
+  if (!firebaseReady) return;
+  await window._dbUpdate(window._dbRef(window._db, `tasks/${id}`), data);
+}
+
+async function deleteTaskRemote(id) {
+  if (!firebaseReady) return;
+  await window._dbRemove(window._dbRef(window._db, `tasks/${id}`));
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function formatDate(s) {
+  if (!s) return null;
+  const d = new Date(s + "T00:00:00");
+  return d.toLocaleDateString("ja-JP", { month: "short", day: "numeric", weekday: "short" });
+}
+function daysLeft(s) {
+  if (!s) return null;
+  const t = new Date(todayStr + "T00:00:00");
+  const d = new Date(s + "T00:00:00");
+  return Math.ceil((d - t) / 86400000);
+}
+function getDuration(s, e) {
+  if (!s || !e) return null;
+  return Math.ceil((new Date(e) - new Date(s)) / 86400000);
+}
+function cat(id) { return CATEGORIES.find(c => c.id === id) || CATEGORIES[4]; }
+function pri(id) { return PRIORITIES.find(p => p.id === id) || PRIORITIES[1]; }
+
+function showToast(msg) {
+  const t = document.createElement("div");
+  t.className = "toast"; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function renderCurrent() {
+  if (view === "list") renderList();
+  else if (view === "calendar") renderCalendar();
+  else if (view === "detail") renderDetail();
+}
+
+function getFiltered() {
+  return tasks
+    .filter(t => filterCat === "all" || t.category === filterCat)
+    .filter(t => filterStatus === "all" ? true : filterStatus === "done" ? t.done : !t.done)
+    .sort((a, b) => {
+      if (sortBy === "due")      return (a.dueDate || "9999") > (b.dueDate || "9999") ? 1 : -1;
+      if (sortBy === "priority") { const o = { high:0, medium:1, low:2 }; return o[a.priority] - o[b.priority]; }
+      return (b.createdAt || 0) - (a.createdAt || 0);
+    });
+}
+
+function renderList() {
+  document.getElementById("headerTitle").textContent = "タスク一覧";
+  const filtered = getFiltered();
+  let html = `
+    <div class="filter-row">
+      <div class="filter-scroll">
+        <button class="cat-chip ${filterCat==="all"?"active":""}" onclick="setFilterCat('all')">✦ すべて</button>
+        ${CATEGORIES.map(c => `<button class="cat-chip ${filterCat===c.id?"active":""}" onclick="setFilterCat('${c.id}')">${c.icon} ${c.label}</button>`).join("")}
+      </div>
+    </div>
+    <div class="sub-filters">
+      <div class="status-row">
+        <button class="status-btn ${filterStatus==="active"?"active":""}" onclick="setStatus('active')">進行中</button>
+        <button class="status-btn ${filterStatus==="done"?"active":""}" onclick="setStatus('done')">完了</button>
+        <button class="status-btn ${filterStatus==="all"?"active":""}" onclick="setStatus('all')">全て</button>
+      </div>
+      <select class="sort-select" onchange="setSortBy(this.value)">
+        <option value="due" ${sortBy==="due"?"selected":""}>期限順</option>
+        <option value="priority" ${sortBy==="priority"?"selected":""}>優先度順</option>
+        <option value="created" ${sortBy==="created"?"selected":""}>作成順</option>
+      </select>
+    </div>
+    <div class="task-list">`;
+
+  if (filtered.length === 0) {
+    html += `<div class="empty"><div class="empty-icon">🎉</div><div class="empty-text">タスクがありません</div></div>`;
+  }
+
+  filtered.forEach(task => {
+    const c = cat(task.category);
+    const p = pri(task.priority);
+    const dl = daysLeft(task.dueDate);
+    const overdue = dl !== null && dl < 0 && !task.done;
+    const urgent  = dl !== null && dl <= 2 && dl >= 0 && !task.done;
+    const dur = getDuration(task.startDate, task.dueDate);
+    const elapsed = getDuration(task.startDate, todayStr) || 0;
+    const pct = dur ? Math.min(100, Math.max(0, (elapsed / dur) * 100)) : 0;
+    const dueColor = overdue ? "#FF4F4F" : urgent ? "#F7C44F" : "#888";
+    const dueBg    = overdue ? "#FF4F4F22" : urgent ? "#F7C44F22" : "#ffffff11";
+    const dueLabel = dl === null ? "" : overdue ? `⚠ ${Math.abs(dl)}日超過` : dl === 0 ? "⏰ 今日" : `📅 ${formatDate(task.dueDate)}`;
+
+    html += `
+      <div class="task-card ${task.done?"done":""}" style="border-left-color:${c.color}" onclick="openDetail('${task.id}')">
+        <div class="task-top">
+          <button class="checkbox" onclick="event.stopPropagation();toggleDone('${task.id}')">
+            ${task.done ? `<span style="color:#4FC97F">✓</span>` : `<span style="color:#444">○</span>`}
+          </button>
+          <div class="task-info">
+            <div class="task-title ${task.done?"done":""}">${escHtml(task.title)}</div>
+            <div class="task-meta">
+              <span class="pri-dot" style="background:${p.color}"></span>
+              <span style="color:#888;font-size:11px">${c.icon} ${c.label}</span>
+              ${dueLabel ? `<span class="due-badge" style="background:${dueBg};color:${dueColor}">${dueLabel}</span>` : ""}
+            </div>
+          </div>
+          <span class="chevron">›</span>
+        </div>
+        ${task.startDate && task.dueDate ? `
+          <div class="task-progress">
+            <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${c.color}"></div></div>
+            <div class="dur-text">${formatDate(task.startDate)} → ${formatDate(task.dueDate)}${dur ? ` (${dur}日間)` : ""}</div>
+          </div>` : ""}
+      </div>`;
+  });
+
+  html += `</div>`;
+  document.getElementById("listView").innerHTML = html;
+}
+
+function renderCalendar() {
+  document.getElementById("headerTitle").textContent = "カレンダー";
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const lastDate = new Date(calYear, calMonth + 1, 0).getDate();
+  const dows = ["日","月","火","水","木","金","土"];
+  const dowColors = ["#FF7777","#ccc","#ccc","#ccc","#ccc","#ccc","#7799FF"];
+
+  function dayStr(d) {
+    return `${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+  }
+  function tasksOnDay(ds) {
+    return tasks.filter(t => t.dueDate === ds || t.startDate === ds);
+  }
+
+  let cells = "";
+  for (let i = 0; i < firstDay; i++) cells += `<div class="cal-cell"></div>`;
+  for (let d = 1; d <= lastDate; d++) {
+    const ds = dayStr(d);
+    const dt = tasksOnDay(ds);
+    const isToday = ds === todayStr;
+    cells += `<div class="cal-cell ${isToday?"today":""}">
+      <span class="cal-day" style="color:${dowColors[(firstDay+d-1)%7]}">${d}</span>
+      ${dt.slice(0,2).map(t => `<div class="cal-dot" style="background:${cat(t.category).color}" onclick="openDetail('${t.id}')"></div>`).join("")}
+      ${dt.length > 2 ? `<span style="font-size:8px;color:#888">+${dt.length-2}</span>` : ""}
+    </div>`;
+  }
+
+  const upcoming = tasks
+    .filter(t => !t.done && t.dueDate >= todayStr)
+    .sort((a,b) => a.dueDate > b.dueDate ? 1 : -1)
+    .slice(0, 6);
+
+  let html = `
+    <div class="cal-header">
+      <button class="cal-nav" onclick="prevMonth()">‹</button>
+      <span class="cal-title">${calYear}年 ${calMonth+1}月</span>
+      <button class="cal-nav" onclick="nextMonth()">›</button>
+    </div>
+    <div class="cal-grid">
+      ${dows.map((d,i) => `<div class="cal-dow" style="color:${dowColors[i]}">${d}</div>`).join("")}
+      ${cells}
+    </div>
+    <div style="padding:0 16px 16px">
+      <div class="section-label">直近のタスク</div>
+      ${upcoming.length === 0 ? `<div class="empty-text" style="font-size:13px;color:#555">なし</div>` :
+        upcoming.map(t => {
+          const dl = daysLeft(t.dueDate);
+          return `<div class="cal-task-row" onclick="openDetail('${t.id}')">
+            <div style="width:10px;height:10px;border-radius:50%;background:${cat(t.category).color};flex-shrink:0"></div>
+            <div style="flex:1;font-size:13px;color:#ddd">${escHtml(t.title)}</div>
+            <div style="font-size:11px;color:${dl<=2?"#F7C44F":"#888"}">${dl===0?"今日":dl===1?"明日":`${dl}日後`}</div>
+          </div>`;
+        }).join("")
+      }
+    </div>`;
+
+  document.getElementById("calendarView").innerHTML = html;
+}
+
+function renderDetail() {
+  const task = tasks.find(t => t.id === selectedTaskId);
+  if (!task) { switchView("list"); return; }
+  document.getElementById("headerTitle").textContent = "詳細";
+  const c = cat(task.category);
+  const p = pri(task.priority);
+  const dl = daysLeft(task.dueDate);
+  const dur = getDuration(task.startDate, task.dueDate);
+  const elapsed = getDuration(task.startDate, todayStr) || 0;
+  const pct = dur ? Math.min(100, Math.max(0, (elapsed / dur) * 100)) : 0;
+  const dv = dl !== null && !task.done
+    ? (dl < 0 ? `<span style="margin-left:6px;font-size:11px;opacity:.8;color:#FF4F4F">(${Math.abs(dl)}日超過)</span>`
+      : dl === 0 ? `<span style="margin-left:6px;font-size:11px;opacity:.8">(今日)</span>`
+      : `<span style="margin-left:6px;font-size:11px;opacity:.8;color:#aaa">(あと${dl}日)</span>`) : "";
+
+  const html = `
+    <button class="back-btn" onclick="goBack()">← 戻る</button>
+    <div class="detail-card">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span class="badge" style="background:${c.color}33;color:${c.color}">${c.icon} ${c.label}</span>
+        <span class="badge" style="background:${p.color}33;color:${p.color}">優先度：${p.label}</span>
+      </div>
+      <div class="detail-title">${escHtml(task.title)}</div>
+      ${task.notes ? `<div class="detail-notes">${escHtml(task.notes)}</div>` : ""}
+      <div class="divider"></div>
+      <div class="detail-row">
+        <span class="detail-label">📅 開始日</span>
+        <span class="detail-val">${formatDate(task.startDate) || "未設定"}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">🏁 期限</span>
+        <span class="detail-val" style="color:${dl!==null&&dl<0?"#FF4F4F":dl!==null&&dl<=2?"#F7C44F":"#ddd"}">${formatDate(task.dueDate) || "未設定"}${dv}</span>
+      </div>
+      ${dur ? `<div class="detail-row"><span class="detail-label">⏱ 期間</span><span class="detail-val">${dur}日間</span></div>` : ""}
+      ${task.startDate && task.dueDate ? `
+        <div style="margin-top:14px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:11px;color:#888">進捗</span>
+            <span style="font-size:11px;color:${c.color}">${Math.round(pct)}%</span>
+          </div>
+          <div class="progress-bar" style="height:8px"><div class="progress-fill" style="width:${pct}%;background:${c.color}"></div></div>
+        </div>` : ""}
+      <div class="divider"></div>
+      <div style="display:flex;gap:10px">
+        <button class="action-btn" style="flex:1;background:${task.done?"#ffffff11":"#4FC97F33"};color:${task.done?"#888":"#4FC97F"}" onclick="toggleDone('${task.id}')">
+          ${task.done ? "◎ 未完了に戻す" : "✓ 完了にする"}
+        </button>
+        <button class="action-btn" style="background:#4F8EF722;color:#4F8EF7" onclick="openEdit('${task.id}')">編集</button>
+        <button class="action-btn" style="background:#FF4F4F22;color:#FF4F4F" onclick="confirmDelete('${task.id}')">削除</button>
+      </div>
+    </div>`;
+
+  document.getElementById("detailView").innerHTML = html;
+}
+
+// ============================================================
+// VIEW SWITCHING
+// ============================================================
+function switchView(v) {
+  view = v;
+  ["list","calendar","detail"].forEach(n => {
+    document.getElementById(n+"View").style.display = n === v ? "block" : "none";
+  });
+  ["list","calendar"].forEach(n => {
+    document.getElementById("tab-"+n)?.classList.toggle("active", n === v);
+  });
+  document.getElementById("scrollArea").scrollTop = 0;
+  renderCurrent();
+}
+
+function openDetail(id) {
+  selectedTaskId = id;
+  view = "detail";
+  ["listView","calendarView"].forEach(el => document.getElementById(el).style.display = "none");
+  document.getElementById("detailView").style.display = "block";
+  renderDetail();
+}
+
+function goBack() {
+  selectedTaskId = null;
+  switchView("list");
+}
+
+// ============================================================
+// FILTER / SORT
+// ============================================================
+function setFilterCat(v) { filterCat = v; renderList(); }
+function setStatus(v)     { filterStatus = v; renderList(); }
+function setSortBy(v)     { sortBy = v; renderList(); }
+function prevMonth()      { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCalendar(); }
+function nextMonth()      { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderCalendar(); }
+
+// ============================================================
+// FORM
+// ============================================================
+function buildFormOptions() {
+  document.getElementById("catOptions").innerHTML = CATEGORIES.map(c =>
+    `<button class="cat-option" id="co-${c.id}" style="border-color:${formCat===c.id?c.color:"#2a2b38"};background:${formCat===c.id?c.color+"22":"transparent"}"
+      onclick="selectCat('${c.id}')">${c.icon}<span style="font-size:10px;color:${formCat===c.id?c.color:"#888"};margin-left:2px">${c.label}</span></button>`
+  ).join("");
+  document.getElementById("priOptions").innerHTML = PRIORITIES.map(p =>
+    `<button class="pri-option" id="po-${p.id}" style="border-color:${formPri===p.id?p.color:"#2a2b38"};background:${formPri===p.id?p.color+"22":"transparent"};color:${formPri===p.id?p.color:"#888"}"
+      onclick="selectPri('${p.id}')">${p.label}</button>`
+  ).join("");
+}
+
+function selectCat(id) { formCat = id; buildFormOptions(); }
+function selectPri(id) { formPri = id; buildFormOptions(); }
+
+function openForm() {
+  editingId = null;
+  formCat = "work"; formPri = "medium";
+  document.getElementById("formTitle").textContent = "タスクを追加";
+  document.getElementById("fTitle").value = "";
+  document.getElementById("fStart").value = "";
+  document.getElementById("fDue").value = "";
+  document.getElementById("fNotes").value = "";
+  document.getElementById("saveBtn").textContent = "追加する";
+  buildFormOptions();
+  checkFormValid();
+  document.getElementById("formOverlay").style.display = "flex";
+  setTimeout(() => document.getElementById("fTitle").focus(), 300);
+}
+
+function openEdit(id) {
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+  editingId = id;
+  formCat = task.category; formPri = task.priority;
+  document.getElementById("formTitle").textContent = "タスクを編集";
+  document.getElementById("fTitle").value = task.title;
+  document.getElementById("fStart").value = task.startDate || "";
+  document.getElementById("fDue").value = task.dueDate || "";
+  document.getElementById("fNotes").value = task.notes || "";
+  document.getElementById("saveBtn").textContent = "保存する";
+  buildFormOptions();
+  checkFormValid();
+  document.getElementById("formOverlay").style.display = "flex";
+}
+
+function closeForm(e) { if (e.target === document.getElementById("formOverlay")) closeFormDirect(); }
+function closeFormDirect() { document.getElementById("formOverlay").style.display = "none"; editingId = null; }
+
+function checkFormValid() {
+  const ok = document.getElementById("fTitle").value.trim() !== "";
+  document.getElementById("saveBtn").disabled = !ok;
+}
+
+async function saveTask() {
+  const title = document.getElementById("fTitle").value.trim();
+  if (!title) return;
+  const data = {
+    title, category: formCat, priority: formPri,
+    startDate: document.getElementById("fStart").value,
+    dueDate: document.getElementById("fDue").value,
+    notes: document.getElementById("fNotes").value,
+  };
+  closeFormDirect();
+  if (editingId) {
+    await updateTask(editingId, data);
+    showToast("✓ タスクを更新しました");
+    if (selectedTaskId === editingId) renderDetail();
+  } else {
+    await pushTask({ ...data, done: false, createdAt: Date.now() });
+    showToast("✓ タスクを追加しました");
+  }
+}
+
+async function toggleDone(id) {
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+  await updateTask(id, { done: !task.done });
+}
+
+function confirmDelete(id) {
+  if (confirm("このタスクを削除しますか？")) {
+    deleteTaskRemote(id);
+    showToast("🗑 削除しました");
+    goBack();
+  }
+}
+
+function escHtml(s) {
+  return (s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// ============================================================
+// INIT
+// ============================================================
+renderList();
+initFirebase().catch(e => {
+  console.error("Firebase init failed:", e);
+  document.getElementById("syncDot").title = "接続エラー";
+});
+
+// Service Worker registration
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(console.error);
+}
+</script>
+
+</body>
+</html>
