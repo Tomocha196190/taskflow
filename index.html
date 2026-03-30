@@ -54,6 +54,8 @@
     .header-actions{display:flex;gap:8px;align-items:center}
     .add-btn{width:40px;height:40px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px #4F8EF744}
     .add-btn:disabled{opacity:0.3;cursor:not-allowed}
+    .reload-btn{width:40px;height:40px;border-radius:50%;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .4s ease}
+    .reload-btn:active{transform:rotate(360deg)}
     .mode-toggle{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:5px 12px;cursor:pointer;user-select:none}
     .mode-toggle-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);transition:background .3s;flex-shrink:0}
     .mode-toggle-dot.edit{background:var(--accent)}
@@ -155,6 +157,7 @@
         <div class="mode-toggle-dot" id="modeDot"></div>
         <span class="mode-toggle-label" id="modeLabel">閲覧</span>
       </div>
+      <button class="reload-btn" onclick="hardReload()" title="再読み込み">↻</button>
       <button class="add-btn" id="addBtn" onclick="openForm()" disabled>＋</button>
     </div>
   </div>
@@ -233,7 +236,7 @@
 const CATEGORIES=[
   {id:"work",label:"仕事",color:"#4F8EF7",icon:"💼"},
   {id:"personal",label:"個人",color:"#F7724F",icon:"🌿"},
-  {id:"health",label:"病院",color:"#4FC97F",icon:"🏥"},
+  {id:"health",label:"健康",color:"#4FC97F",icon:"💪"},
   {id:"study",label:"学習",color:"#B44FF7",icon:"📚"},
   {id:"kids",label:"子供",color:"#FF9F43",icon:"🧒"},
   {id:"other",label:"その他",color:"#F7C44F",icon:"✦"},
@@ -603,6 +606,22 @@ async function toggleDone(id){const task=tasks.find(t=>t.id===id);if(!task)retur
 
 function confirmDelete(id){
   if(confirm("このタスクを削除しますか？")){deleteTaskRemote(id);showToast("🗑 削除しました");goBack();}
+}
+
+function hardReload(){
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.getRegistrations().then(regs=>{
+      const deletes=regs.map(r=>r.unregister());
+      Promise.all(deletes).then(()=>{
+        caches.keys().then(keys=>{
+          const clears=keys.map(k=>caches.delete(k));
+          Promise.all(clears).then(()=>location.reload(true));
+        });
+      });
+    });
+  } else {
+    location.reload(true);
+  }
 }
 
 function escHtml(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
