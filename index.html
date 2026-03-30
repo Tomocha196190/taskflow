@@ -259,6 +259,7 @@ async function initFirebase(){
 }
 async function pushTask(t){if(!firebaseReady)return;const{id,...d}=t;await window._dbPush(window._dbRef(window._db,"tasks"),d);}
 async function updateTask(id,d){if(!firebaseReady)return;await window._dbUpdate(window._dbRef(window._db,`tasks/${id}`),d);}
+async function replaceTask(id,d){if(!firebaseReady)return;await window._dbSet(window._dbRef(window._db,`tasks/${id}`),d);}
 async function deleteTaskRemote(id){if(!firebaseReady)return;await window._dbRemove(window._dbRef(window._db,`tasks/${id}`));}
 
 function formatDate(s){if(!s)return null;const d=new Date(s+"T00:00:00");return d.toLocaleDateString("ja-JP",{month:"short",day:"numeric",weekday:"short"});}
@@ -573,7 +574,8 @@ async function saveTask(){
   const currentEditingId=editingId; // closeFormDirectの前に保存
   closeFormDirect();
   if(currentEditingId){
-    await updateTask(currentEditingId,data);
+    const existingTask=tasks.find(t=>t.id===currentEditingId);
+    await replaceTask(currentEditingId,{...data,done:existingTask?existingTask.done:false,createdAt:existingTask?existingTask.createdAt:Date.now()});
     showToast("✓ タスクを更新しました");
     if(selectedTaskId===currentEditingId)renderDetail();
   } else {
