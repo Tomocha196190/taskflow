@@ -163,6 +163,15 @@
   </div>
 </div>
 
+<!-- DAY SHEET -->
+
+<div class="overlay" id="daySheetOverlay" style="display:none" onclick="closeDaySheet(event)">
+  <div class="form-sheet" onclick="event.stopPropagation()" style="padding-bottom:calc(env(safe-area-inset-bottom,16px) + 16px)">
+    <div class="form-handle"></div>
+    <div id="daySheetContent"></div>
+  </div>
+</div>
+
 <div class="overlay" id="formOverlay" style="display:none" onclick="closeForm(event)">
   <div class="form-sheet" onclick="event.stopPropagation()">
     <div class="form-handle"></div>
@@ -391,7 +400,7 @@ function renderCalendar(){
     }).join("");
     const total=singleTasks.length+rangeTasks.length;
 
-    cells+=`<div class="cal-cell ${isToday?"today":""}">
+    cells+=`<div class="cal-cell ${isToday?"today":""}" onclick="openDaySheet('${dateStr}')">
       <span class="cal-day" style="color:${dowColors[(firstDay+d-1)%7]}">${d}</span>
       ${dots}
       ${bars}
@@ -591,6 +600,48 @@ function confirmDelete(id){
 }
 
 function escHtml(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
+function openDaySheet(dateStr){
+  const dayTasks=tasks.filter(t=>{
+    if(t.dateType==="single")return t.singleDate===dateStr;
+    const s=t.startDate,e=t.endDate;
+    if(!s&&!e)return false;
+    return dateStr>=(s||e)&&dateStr<=(e||s);
+  });
+  const d=new Date(dateStr+"T00:00:00");
+  const label=d.toLocaleDateString("ja-JP",{month:"long",day:"numeric",weekday:"long"});
+  let html=`<div style="font-size:16px;font-weight:700;margin-bottom:14px;color:#E0E0E0">${label}</div>`;
+  if(dayTasks.length===0){
+    html+=`<div style="text-align:center;padding:30px 0;color:#555;font-size:13px">この日の予定はありません</div>`;
+  } else {
+    dayTasks.forEach(t=>{
+      const c=cat(t.category),p=pri(t.priority);
+      const isSingle=t.dateType==="single";
+      const timeStr=t.startTime?`<span style="font-family:'DM Mono',monospace;font-size:11px;color:#888"> ${formatTime(t.startTime)}</span>`:"";
+      const typeIcon=isSingle?"📌":"📅";
+      const dateInfo=isSingle?(t.singleDate||""):((t.startDate||"")+" → "+(t.endDate||""));
+      html+=`<div style="background:#1A1B26;border-radius:12px;padding:12px 14px;margin-bottom:8px;border-left:3px solid ${c.color};cursor:pointer" onclick="closeDaySheet();setTimeout(()=>openDetail('${t.id}'),100)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="font-size:13px;font-weight:500;color:${t.done?"#666":"#E0E0E0"};${t.done?"text-decoration:line-through":""};flex:1">${escHtml(t.title)}</span>
+          ${t.done?'<span style="color:#4FC97F;font-size:12px">✓</span>':""}
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span style="font-size:11px;color:#888">${c.icon} ${c.label}</span>
+          <span style="width:5px;height:5px;border-radius:50%;background:${p.color};display:inline-block"></span>
+          <span style="font-size:11px;color:#888">${typeIcon} ${dateInfo}</span>
+          ${timeStr}
+        </div>
+      </div>`;
+    });
+  }
+  document.getElementById("daySheetContent").innerHTML=html;
+  document.getElementById("daySheetOverlay").style.display="flex";
+}
+function closeDaySheet(e){
+  if(!e||e.target===document.getElementById("daySheetOverlay")){
+    document.getElementById("daySheetOverlay").style.display="none";
+  }
+}
 
 renderList();
 initFirebase().catch(e=>{console.error("Firebase init failed:",e);});
