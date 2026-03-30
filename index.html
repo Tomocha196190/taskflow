@@ -96,7 +96,7 @@
     .cal-title{font-size:16px;font-weight:700}
     .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;padding:0 8px 8px}
     .cal-dow{text-align:center;font-size:11px;padding:4px 0;font-family:'DM Mono',monospace}
-    .cal-cell{min-height:54px;padding:3px 2px;border-radius:6px;display:flex;flex-direction:column;align-items:center;gap:1px;position:relative;overflow:hidden}
+    .cal-cell{min-height:54px;padding:3px 2px;border-radius:6px;display:flex;flex-direction:column;align-items:center;gap:1px;position:relative;overflow:hidden;cursor:pointer}
     .cal-cell.today{background:#4F8EF722;border:1px solid #4F8EF755}
     .cal-day{font-size:11px;z-index:1;position:relative}
     .cal-bar{position:absolute;left:1px;right:1px;height:5px;border-radius:2px;opacity:0.8;cursor:pointer}
@@ -404,7 +404,7 @@ function renderCalendar(){
       <span class="cal-day" style="color:${dowColors[(firstDay+d-1)%7]}">${d}</span>
       ${dots}
       ${bars}
-      ${total>2?`<span style="font-size:7px;color:#888;z-index:1">+${total-2}</span>`:""}
+      ${total>2?"<span style='font-size:7px;color:#888;z-index:1'>+"+(total-2)+"</span>":""}
     </div>`;
   }
 
