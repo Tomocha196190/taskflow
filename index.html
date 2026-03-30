@@ -239,7 +239,7 @@ const PRIORITIES=[
 ];
 
 let tasks=[],view="list",filterCat="all",filterStatus="active",sortBy="due";
-let selectedTaskId=null,editingId=null,formCat="work",formPri="medium",formDateType="range";
+let selectedTaskId=null,editingId=null,formCat="work",formPri="medium",formDateType="range",previousView="list";
 let calYear,calMonth,firebaseReady=false,isEditMode=false;
 
 const today=new Date();
@@ -392,11 +392,11 @@ function renderCalendar(){
     // 期間タスク（帯グラフ用）
     const rangeTasks=tasks.filter(t=>t.dateType!=="single"&&t.startDate&&t.endDate&&dateStr>=t.startDate&&dateStr<=t.endDate);
 
-    const dots=singleTasks.slice(0,2).map(t=>`<div class="cal-dot" style="background:${cat(t.category).color}" onclick="openDetail('${t.id}')"></div>`).join("");
+    const dots=singleTasks.slice(0,2).map(t=>`<div class="cal-dot" style="background:${cat(t.category).color}"></div>`).join("");
     // 帯グラフ：最大2本、下から積み上げ
     const bars=rangeTasks.slice(0,2).map((t,i)=>{
       const c=cat(t.category);
-      return `<div class="cal-bar" style="background:${c.color};bottom:${2+i*7}px" onclick="event.stopPropagation();openDetail('${t.id}')"></div>`;
+      return `<div class="cal-bar" style="background:${c.color};bottom:${2+i*7}px"></div>`;
     }).join("");
     const total=singleTasks.length+rangeTasks.length;
 
@@ -502,8 +502,8 @@ function switchView(v){
   document.getElementById("scrollArea").scrollTop=0;
   renderCurrent();
 }
-function openDetail(id){selectedTaskId=id;view="detail";["listView","calendarView"].forEach(el=>document.getElementById(el).style.display="none");document.getElementById("detailView").style.display="block";renderDetail();}
-function goBack(){selectedTaskId=null;switchView("list");}
+function openDetail(id){previousView=view;selectedTaskId=id;view="detail";["listView","calendarView"].forEach(el=>document.getElementById(el).style.display="none");document.getElementById("detailView").style.display="block";renderDetail();}
+function goBack(){selectedTaskId=null;switchView(previousView||"list");}
 function setFilterCat(v){filterCat=v;renderList();}
 function setStatus(v){filterStatus=v;renderList();}
 function setSortBy(v){sortBy=v;renderList();}
