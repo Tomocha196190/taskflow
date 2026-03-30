@@ -234,7 +234,7 @@ let selectedTaskId=null,editingId=null,formCat="work",formPri="medium",formDateT
 let calYear,calMonth,firebaseReady=false,isEditMode=false;
 
 const today=new Date();
-const todayStr=today.toISOString().slice(0,10);
+const todayStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
 calYear=today.getFullYear();calMonth=today.getMonth();
 
 function toggleMode(){
@@ -570,11 +570,12 @@ async function saveTask(){
     startTime:isSingle?document.getElementById("fSingleTime").value:document.getElementById("fStartTime").value,
     notes:document.getElementById("fNotes").value,
   };
+  const currentEditingId=editingId; // closeFormDirectの前に保存
   closeFormDirect();
-  if(editingId){
-    await updateTask(editingId,data);
+  if(currentEditingId){
+    await updateTask(currentEditingId,data);
     showToast("✓ タスクを更新しました");
-    if(selectedTaskId===editingId)renderDetail();
+    if(selectedTaskId===currentEditingId)renderDetail();
   } else {
     await pushTask({...data,done:false,createdAt:Date.now()});
     showToast("✓ タスクを追加しました");
